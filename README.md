@@ -5,27 +5,27 @@ Get device heading information on iOS or Android
 Report back device orientation in degrees, 0-360, with 0 being North.
 
 #### Example
-```java
-const { DeviceEventEmitter } = require('react-native');
-const ReactNativeHeading = require('react-native-heading');
+```javascript
+import { DeviceEventEmitter } from 'react-native';
+import ReactNativeHeading from 'react-native-heading';
 
 //....
   componentDidMount() {
     ReactNativeHeading.start(1)
-	.then(didStart => {
-		this.setState({
-			headingIsSupported: didStart,
-		})
-	})
-	
+      .then(didStart => {
+        this.setState({
+          headingIsSupported: didStart,
+        })
+      })
+
     DeviceEventEmitter.addListener('headingUpdated', data => {
     	console.log('New heading is:', data.heading);
     });
 
   }
   componentWillUnmount() {
-  	ReactNativeHeading.stop();
-  	DeviceEventEmitter.removeAllListeners('headingUpdated');
+    ReactNativeHeading.stop();
+    DeviceEventEmitter.removeAllListeners('headingUpdated');
   }
 //...
 ```
