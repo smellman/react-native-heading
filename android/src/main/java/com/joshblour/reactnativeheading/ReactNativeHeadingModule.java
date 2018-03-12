@@ -1,47 +1,30 @@
 package com.joshblour.reactnativeheading;
 
-import android.app.Activity;
-import android.app.Application;
 import android.content.Context;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
-import android.os.ParcelUuid;
-import android.util.Log;
 
-
-import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
-import com.facebook.react.bridge.WritableArray;
-import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
-import com.joshblour.discovery.BLEUser;
-import com.joshblour.discovery.Discovery;
-
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.Locale;
-import java.util.TimeZone;
-
 
 public class ReactNativeHeadingModule extends ReactContextBaseJavaModule implements SensorEventListener {
 
-
     private static Context mApplicationContext;
-    private int mAzimuth = 0; // degree
-    private int newAzimuth = 0; // degree
+    private float mAzimuth = 0; // degree
+    private float newAzimuth = 0; // degree
     private float mFilter = 5;
     private SensorManager mSensorManager;
-    private Sensor mSensor;
+    private float[] mMagnetics = new float[3];
+    private float[] mAccelerometers = new float[3];
     private float[] orientation = new float[3];
-    private float[] rMat = new float[9];
+
+    private static final float alpha = 0.8f;
 
     public ReactNativeHeadingModule(ReactApplicationContext reactContext) {
         super(reactContext);
@@ -53,9 +36,6 @@ public class ReactNativeHeadingModule extends ReactContextBaseJavaModule impleme
         return "ReactNativeHeading";
     }
 
-
-
-
     @ReactMethod
     public void start(int filter, Promise promise) {
 
@@ -63,12 +43,10 @@ public class ReactNativeHeadingModule extends ReactContextBaseJavaModule impleme
             mSensorManager = (SensorManager) mApplicationContext.getSystemService(Context.SENSOR_SERVICE);
         }
 
-        if (mSensor == null) {
-            mSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
-        }
-
         mFilter = filter;
-        boolean started = mSensorManager.registerListener(this, mSensor, SensorManager.SENSOR_DELAY_UI);
+        boolean started = mSensorManager.registerListener(this, mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD), SensorManager.SENSOR_DELAY_UI);
+        mSensorManager.registerListener(this, mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_UI);
+
         promise.resolve(started);
     }
 
@@ -79,24 +57,40 @@ public class ReactNativeHeadingModule extends ReactContextBaseJavaModule impleme
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-        if( event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR ){
-            // calculate th rotation matrix
-            SensorManager.getRotationMatrixFromVector(rMat, event.values);
-            // get the azimuth value (orientation[0]) in degree
+        if (event.accuracy == SensorManager.SENSOR_STATUS_UNRELIABLE) {
+            return;
+        }
+        switch (event.sensor.getType()) {
+            case Sensor.TYPE_MAGNETIC_FIELD:
+                mMagnetics = event.values.clone();
 
-            newAzimuth = (int) ((((( Math.toDegrees( SensorManager.getOrientation( rMat, orientation )[0] ) + 360 ) % 360) -
-                          ( Math.toDegrees( SensorManager.getOrientation( rMat, orientation )[2] ))) +360) % 360);
+                break;
+            case Sensor.TYPE_ACCELEROMETER:
+                mAccelerometers = event.values.clone();
+                break;
+        }
 
-            //dont react to changes smaller than the filter value
+        if (mMagnetics != null && mAccelerometers != null) {
+            float[] r = new float[16];
+            float[] i = new float[16];
+            float[] ir = new float[16];
+
+            SensorManager.getRotationMatrix(r, i, mAccelerometers, mMagnetics);
+            SensorManager.remapCoordinateSystem(r, SensorManager.AXIS_X, SensorManager.AXIS_Z, ir);
+            SensorManager.getOrientation(ir, orientation);
+
+            float newAzimuth = (float) Math.toDegrees(orientation[0]);
+            if (newAzimuth < 0) {
+                newAzimuth = newAzimuth + 360.0f;
+            }
             if (Math.abs(mAzimuth - newAzimuth) < mFilter) {
                 return;
             }
-
             getReactApplicationContext()
                     .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-                    .emit("headingUpdated", (int) newAzimuth);
-
+                    .emit("headingUpdated", newAzimuth);
             mAzimuth = newAzimuth;
+
         }
     }
 
@@ -105,4 +99,5 @@ public class ReactNativeHeadingModule extends ReactContextBaseJavaModule impleme
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
 
     }
+
 }
