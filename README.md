@@ -5,6 +5,7 @@ Get device heading information on iOS or Android
 Report back device orientation in degrees, 0-360, with 0 being North.
 
 #### Example
+
 ```javascript
 import { DeviceEventEmitter } from 'react-native';
 import ReactNativeHeading from 'react-native-heading';
@@ -18,8 +19,8 @@ import ReactNativeHeading from 'react-native-heading';
         })
       })
 
-    DeviceEventEmitter.addListener('headingUpdated', data => {
-    	console.log('New heading is:', data.heading);
+    DeviceEventEmitter.addListener('headingUpdated', heading => {
+    	console.log('New heading is:', heading);
     });
 
   }
@@ -50,8 +51,10 @@ npm install --save react-native-heading
 ````
 
 ### iOS
-* Run open node_modules/react-native-heading
+* Run `open node_modules/react-native-heading`
 * Drag ReactNativeHeading.xcodeproj into your Libraries group
+* Drag Products/libReactNativeHeading.a into your "Link Binary With Libraries"
+  * see https://facebook.github.io/react-native/docs/linking-libraries-ios.html#manual-linking
 
 ### Android
 ##### Step 1 - Update Gradle Settings

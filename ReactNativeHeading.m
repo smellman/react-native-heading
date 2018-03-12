@@ -68,7 +68,7 @@ RCT_EXPORT_METHOD(stop) {
 
     NSDictionary *headingEvent = @{@"heading": @(heading)};
 
-    [self sendEventWithName:@"headingUpdated" body:headingEvent];
+    [self sendEventWithName:@"headingUpdated" body:@(heading)];
 }
 
 @end
